@@ -1,4 +1,6 @@
 import path from 'path'
+import type { RouteMatch } from './future/route-matches/route-match'
+
 import {
   FONT_MANIFEST,
   PAGES_MANIFEST,
@@ -13,7 +15,6 @@ import { PageNotFoundError, MissingStaticPage } from '../shared/lib/utils'
 import LRUCache from 'next/dist/compiled/lru-cache'
 import { loadManifest } from './load-manifest'
 import { promises } from 'fs'
-import { RouteMatch } from './future/route-matches/route-match'
 
 const isDev = process.env.NODE_ENV === 'development'
 const pagePathCache = !isDev

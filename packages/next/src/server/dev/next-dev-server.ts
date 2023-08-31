@@ -752,6 +752,7 @@ export default class DevServer extends Server {
       // Wrap build errors so that they don't get logged again
       throw new WrappedBuildError(compilationErr)
     }
+
     try {
       if (shouldEnsure || this.renderOpts.customServer) {
         await this.ensurePage({

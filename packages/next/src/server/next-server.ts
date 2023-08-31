@@ -646,7 +646,7 @@ export default class NextNodeServer extends BaseServer {
       )
     }
 
-    if (query.__nextLocale) {
+    if (!isAppPath && query.__nextLocale) {
       paths.unshift(
         ...paths.map(
           (path) => `/${query.__nextLocale}${path === '/' ? '' : path}`
@@ -664,6 +664,7 @@ export default class NextNodeServer extends BaseServer {
         })
 
         if (
+          !isAppPath &&
           query.__nextLocale &&
           typeof components.Component === 'string' &&
           !pagePath.startsWith(`/${query.__nextLocale}`)
