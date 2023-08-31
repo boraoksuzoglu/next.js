@@ -191,11 +191,13 @@ export default class NextNodeServer extends BaseServer {
         distDir: this.distDir,
         pathname: '/_document',
         isAppPath: false,
+        match: null,
       }).catch(() => {})
       loadComponents({
         distDir: this.distDir,
         pathname: '/_app',
         isAppPath: false,
+        match: null,
       }).catch(() => {})
     }
 
@@ -553,7 +555,8 @@ export default class NextNodeServer extends BaseServer {
 
   protected async renderPageComponent(
     ctx: RequestContext,
-    bubbleNoFallback: boolean
+    bubbleNoFallback: boolean,
+    match: RouteMatch | null
   ) {
     const edgeFunctionsPages = this.getEdgeFunctionsPages() || []
     if (edgeFunctionsPages.length) {
@@ -581,7 +584,7 @@ export default class NextNodeServer extends BaseServer {
       }
     }
 
-    return super.renderPageComponent(ctx, bubbleNoFallback)
+    return super.renderPageComponent(ctx, bubbleNoFallback, match)
   }
 
   protected async findPageComponents({
@@ -589,6 +592,7 @@ export default class NextNodeServer extends BaseServer {
     query,
     params,
     isAppPath,
+    match,
   }: {
     pathname: string
     query: NextParsedUrlQuery
@@ -599,6 +603,7 @@ export default class NextNodeServer extends BaseServer {
     sriEnabled?: boolean
     appPaths?: ReadonlyArray<string> | null
     shouldEnsure: boolean
+    match: RouteMatch | null
   }): Promise<FindComponentsResult | null> {
     return getTracer().trace(
       NextNodeServerSpan.findPageComponents,
@@ -614,6 +619,7 @@ export default class NextNodeServer extends BaseServer {
           query,
           params,
           isAppPath,
+          match,
         })
     )
   }
@@ -623,11 +629,13 @@ export default class NextNodeServer extends BaseServer {
     query,
     params,
     isAppPath,
+    match,
   }: {
     pathname: string
     query: NextParsedUrlQuery
     params: Params
     isAppPath: boolean
+    match: RouteMatch | null
   }): Promise<FindComponentsResult | null> {
     const paths: string[] = [pathname]
     if (query.amp) {
@@ -652,6 +660,7 @@ export default class NextNodeServer extends BaseServer {
           distDir: this.distDir,
           pathname: pagePath,
           isAppPath,
+          match,
         })
 
         if (
@@ -813,7 +822,8 @@ export default class NextNodeServer extends BaseServer {
   protected async handleCatchallRenderRequest(
     req: BaseNextRequest,
     res: BaseNextResponse,
-    parsedUrl: NextUrlWithParsedQuery
+    parsedUrl: NextUrlWithParsedQuery,
+    match: RouteMatch | null
   ) {
     let { pathname, query } = parsedUrl
     if (!pathname) {
@@ -828,17 +838,18 @@ export default class NextNodeServer extends BaseServer {
       // next.js core assumes page path without trailing slash
       pathname = removeTrailingSlash(pathname)
 
-      const options: MatchOptions = {
-        i18n: this.i18nProvider?.fromQuery(pathname, query),
-        matchedOutputPathname: undefined,
-      }
-      const match = await this.matchers.match(pathname, options)
-
-      // If we don't have a match, try to render it anyways.
       if (!match) {
-        await this.render(req, res, pathname, query, parsedUrl, true)
+        const options: MatchOptions = {
+          i18n: this.i18nProvider?.fromQuery(pathname, query),
+          matchedOutputPathname: undefined,
+        }
+        match = await this.matchers.match(pathname, options)
 
-        return { finished: true }
+        // If we don't have a match, try to render it anyways.
+        if (!match) {
+          await this.render(req, res, pathname, query, parsedUrl, true)
+          return { finished: true }
+        }
       }
 
       // Add the match to the request so we don't have to re-run the matcher
@@ -855,6 +866,7 @@ export default class NextNodeServer extends BaseServer {
           await this.render404(req, res, parsedUrl)
           return { finished: true }
         }
+
         delete query._nextBubbleNoFallback
         delete query[NEXT_RSC_UNION_QUERY]
 

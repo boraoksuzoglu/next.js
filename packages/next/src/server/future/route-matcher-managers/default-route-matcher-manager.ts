@@ -39,7 +39,7 @@ type RouteMatchers = {
    * is used to match against a specific definition pathname when a specific
    * output is requested.
    */
-  all: ReadonlyMap<string, ReadonlyArray<RouteMatcher>>
+  byPathname: ReadonlyMap<string, ReadonlyArray<RouteMatcher>>
 }
 
 export class DefaultRouteMatcherManager implements RouteMatcherManager {
@@ -55,7 +55,7 @@ export class DefaultRouteMatcherManager implements RouteMatcherManager {
     static: [],
     dynamic: [],
     duplicates: new Map(),
-    all: new Map(),
+    byPathname: new Map(),
   }
 
   /**
@@ -135,7 +135,7 @@ export class DefaultRouteMatcherManager implements RouteMatcherManager {
       }, [])
 
       // Group the matchers and find any duplicates.
-      const { all, duplicates } = groupMatcherResults(matchers)
+      const { byPathname, duplicates } = groupMatcherResults(matchers)
 
       // Update the duplicate matchers. This is used in the development manager
       // to warn about duplicates.
@@ -155,7 +155,7 @@ export class DefaultRouteMatcherManager implements RouteMatcherManager {
       this.previousMatchers = matchers
 
       // Update the matcher outputs reference.
-      this.matchers.all = all
+      this.matchers.byPathname = byPathname
 
       // For matchers that are for static routes, filter them now.
       this.matchers.static = matchers.filter((matcher) => !matcher.isDynamic)
@@ -253,7 +253,7 @@ export class DefaultRouteMatcherManager implements RouteMatcherManager {
     // If a definition pathname was provided, get the match for it, and only it.
     if (normalized.options.matchedOutputPathname) {
       // Get the matcher for the definition pathname.
-      const matchers = this.matchers.all.get(
+      const matchers = this.matchers.byPathname.get(
         normalized.options.matchedOutputPathname
       )
 

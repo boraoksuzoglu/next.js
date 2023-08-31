@@ -13,6 +13,7 @@ import { PageNotFoundError, MissingStaticPage } from '../shared/lib/utils'
 import LRUCache from 'next/dist/compiled/lru-cache'
 import { loadManifest } from './load-manifest'
 import { promises } from 'fs'
+import { RouteMatch } from './future/route-matches/route-match'
 
 const isDev = process.env.NODE_ENV === 'development'
 const pagePathCache = !isDev
@@ -104,12 +105,7 @@ export function getPagePath(
   return pagePath
 }
 
-export function requirePage(
-  page: string,
-  distDir: string,
-  isAppPath: boolean
-): any {
-  const pagePath = getPagePath(page, distDir, undefined, isAppPath)
+function requirePagePath(pagePath: string, page: string) {
   if (pagePath.endsWith('.html')) {
     return promises.readFile(pagePath, 'utf8').catch((err) => {
       throw new MissingStaticPage(page, err.message)
@@ -120,6 +116,19 @@ export function requirePage(
     ? // @ts-ignore
       __non_webpack_require__(pagePath)
     : require(pagePath)
+}
+
+export function requireMatchPage(match: RouteMatch): any {
+  return requirePagePath(match.definition.filename, match.definition.page)
+}
+
+export function requirePage(
+  page: string,
+  distDir: string,
+  isAppPath: boolean
+): any {
+  const pagePath = getPagePath(page, distDir, undefined, isAppPath)
+  return requirePagePath(pagePath, page)
 }
 
 export function requireFontManifest(distDir: string) {

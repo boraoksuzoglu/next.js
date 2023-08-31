@@ -11,6 +11,7 @@ import type {
   GetStaticProps,
 } from 'next/types'
 import type { RouteModule } from './future/route-modules/route-module'
+import type { RouteMatch } from './future/route-matches/route-match'
 
 import {
   BUILD_MANIFEST,
@@ -19,13 +20,16 @@ import {
   SERVER_REFERENCE_MANIFEST,
 } from '../shared/lib/constants'
 import { join } from 'path'
-import { requirePage } from './require'
+import { requireMatchPage, requirePage } from './require'
 import { BuildManifest } from './get-page-files'
 import { interopDefault } from '../lib/interop-default'
 import { getTracer } from './lib/trace/tracer'
 import { LoadComponentsSpan } from './lib/trace/constants'
 import { loadManifest } from './load-manifest'
 import { wait } from '../lib/wait'
+
+import { RouteKind } from './future/route-kind'
+
 export type ManifestItem = {
   id: number | string
   files: string[]
@@ -119,10 +123,12 @@ async function loadComponentsImpl({
   distDir,
   pathname,
   isAppPath,
+  match,
 }: {
   distDir: string
   pathname: string
   isAppPath: boolean
+  match?: RouteMatch | null
 }): Promise<LoadComponentsReturnType> {
   let DocumentMod = {}
   let AppMod = {}
@@ -132,16 +138,18 @@ async function loadComponentsImpl({
       Promise.resolve().then(() => requirePage('/_app', distDir, false)),
     ])
   }
-  const ComponentMod = await Promise.resolve().then(() =>
-    requirePage(pathname, distDir, isAppPath)
-  )
+
+  const ComponentMod = match
+    ? await requireMatchPage(match)
+    : await requirePage(pathname, distDir, isAppPath)
 
   // Make sure to avoid loading the manifest for Route Handlers
-  const hasClientManifest =
-    isAppPath &&
-    (pathname.endsWith('/page') ||
-      pathname === '/not-found' ||
-      pathname === '/_not-found')
+  const hasClientManifest = match
+    ? match.definition.kind === RouteKind.APP_PAGE
+    : isAppPath &&
+      (pathname.endsWith('/page') ||
+        pathname === '/not-found' ||
+        pathname === '/_not-found')
 
   const [
     buildManifest,
